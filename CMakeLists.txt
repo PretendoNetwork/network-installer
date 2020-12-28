@@ -12,4 +12,7 @@ add_executable(juxt-patcher
 set_property(TARGET juxt-patcher PROPERTY CXX_STANDARD 20)
 target_compile_options(juxt-patcher PRIVATE -Wall)
 
+add_subdirectory(ext/libiosuhax)
+add_subdirectory(ext/wiiurpxlib)
+target_link_libraries(juxt-patcher libiosuhax::libiosuhax wiiurpxlib::wiiurpxlib)
 wut_create_rpx(juxt-patcher)

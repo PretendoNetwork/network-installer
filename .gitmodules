@@ -1,0 +1,6 @@
+[submodule "ext/libiosuhax"]
+	path = ext/libiosuhax
+	url = https://github.com/yawut/libiosuhax
+[submodule "ext/wiiurpxlib"]
+	path = ext/wiiurpxlib
+	url = https://github.com/yawut/wiiurpxlib
