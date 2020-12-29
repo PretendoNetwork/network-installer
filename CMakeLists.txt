@@ -6,6 +6,7 @@ include("${WUT_ROOT}/share/wut.cmake" REQUIRED)
 
 add_executable(network-installer
     main.cpp
+    rpx_patches/rpx_hashes.cpp
     util/log.c
     util/titles.cpp
     util/iosu_fs.cpp
@@ -19,5 +20,6 @@ target_include_directories(network-installer PRIVATE
 
 add_subdirectory(ext/libiosuhax)
 add_subdirectory(ext/wiiurpxlib)
+target_include_directories(network-installer PRIVATE ext/picosha2)
 target_link_libraries(network-installer libiosuhax::libiosuhax wiiurpxlib::wiiurpxlib)
 wut_create_rpx(network-installer)
