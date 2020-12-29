@@ -24,11 +24,11 @@ int main(int argc, char** argv) {
     int ret;
 
     LOGInit();
-    WHBLogConsoleInit();
+    //WHBLogConsoleInit();
     WHBProcInit();
     OnLeavingScope _log_c([&] {
         WHBProcShutdown();
-        WHBLogConsoleFree();
+        //WHBLogConsoleFree();
         LOGShutdown();
     });
 
