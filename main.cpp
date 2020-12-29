@@ -30,7 +30,7 @@ int main(int argc, char** argv) {
         LOGShutdown();
     });
 
-    printf("hi!\n");
+    printf("Pretendo Network Installer indev\n");
 
     std::filesystem::path miiverse_path;
     /* Haxchi requires MCP functions to be kept somewhat isolated, so we get
