@@ -1,5 +1,7 @@
-#include "log.h"
-#include "util.hpp"
+#include "util/log.h"
+#include "util/util.hpp"
+#include "util/titles.hpp"
+#include "util/iosu_fs.hpp"
 
 #include <cstdio>
 #include <array>
@@ -12,8 +14,6 @@
 #include <whb/proc.h>
 #include <coreinit/mcp.h>
 
-#include <iosuhax.h>
-#include <iosuhax_devoptab.h>
 #include <rpx.hpp>
 
 // /vol/system_slc/title/00050010/1000400a/code
@@ -32,50 +32,36 @@ int main(int argc, char** argv) {
 
     printf("hi!\n");
 
-    auto mcp = MCP_Open();
-    if (mcp < 0) {
-        printf("couldn't open MCP: %d\n", mcp);
-        return -1;
+    std::filesystem::path miiverse_path;
+    /* Haxchi requires MCP functions to be kept somewhat isolated, so we get
+     * them all out of the way early before we set up iosuhax. */
+    {
+        auto mcp = MCP_Open();
+        if (mcp < 0) {
+            printf("couldn't open MCP: %d\n", mcp);
+            return -1;
+        }
+        OnLeavingScope _mcp_c([&] {
+            MCP_Close(mcp);
+            mcp = -1;
+        });
+
+        miiverse_path = GetTitlePath(mcp, MCP_APP_TYPE_MIIVERSE);
+        if (miiverse_path.empty()) {
+            printf("couldn't find Miiverse title!\n");
+            return -1;
+        }
+        printf("miiverse found at %s\n", miiverse_path.c_str());
     }
+    /* No more MCP functions from here on out. OK to set up iosuhax. */
 
-    MCPTitleListType miiverse_title;
-    uint32_t title_count;
-    ret = MCP_TitleListByAppType(mcp, MCP_APP_TYPE_MIIVERSE, &title_count, &miiverse_title, sizeof(miiverse_title));
-    if (ret != 0 || title_count != 1) {
-        printf("failed to find Miiverse title!\n");
-        return -1;
-    }
-    //std::filesystem::path is kinda cursed
-    std::filesystem::path miiverse_path(std::string("iosu:") + miiverse_title.path);
-    printf("miiverse: %s\n", miiverse_path.c_str());
-
-    if (mcp >= 0) MCP_Close(mcp);
-
-    //haxchi compat: don't use any MCP functions after this point
-
-    ret = IOSUHAX_Open(NULL);
+    ret = iosu_fs_setup();
     if (ret < 0) {
-        printf("couldn't open iosuhax!\n");
+        printf("failed to set up iosuhax!\n");
         return -1;
     }
     OnLeavingScope _ios_c([&] {
-        IOSUHAX_Close();
-    });
-
-    int fsa_fd = IOSUHAX_FSA_Open();
-    if (fsa_fd < 0) {
-        printf("couldn't open fsa!\n");
-        return -1;
-    }
-    OnLeavingScope _fsa_c([&] {
-        if (fsa_fd >= 0) IOSUHAX_FSA_Close(fsa_fd);
-    });
-
-    ret = mount_fs("iosu", fsa_fd, NULL, "/");
-    //I know this is a bit odd
-    printf("mount ret: %d\n", ret);
-    OnLeavingScope _mnt_c([&] {
-        unmount_fs("iosu");
+        iosu_fs_stop();
     });
 
     //goal: get a state together; ready to show a menu or something

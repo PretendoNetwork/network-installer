@@ -6,11 +6,16 @@ include("${WUT_ROOT}/share/wut.cmake" REQUIRED)
 
 add_executable(juxt-patcher
     main.cpp
-    log.c
+    util/log.c
+    util/titles.cpp
+    util/iosu_fs.cpp
 )
 
 set_property(TARGET juxt-patcher PROPERTY CXX_STANDARD 20)
 target_compile_options(juxt-patcher PRIVATE -Wall)
+target_include_directories(juxt-patcher PRIVATE
+    .
+)
 
 add_subdirectory(ext/libiosuhax)
 add_subdirectory(ext/wiiurpxlib)
