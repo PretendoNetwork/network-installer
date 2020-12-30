@@ -1,0 +1,15 @@
+#pragma once
+
+enum MenuDoneError {
+    MENU_DONE_NO_ERROR,
+    MENU_DONE_MCP_FAIL,
+    MENU_DONE_NO_MIIVERSE,
+    MENU_DONE_NO_CFW,
+    MENU_DONE_CFW_FAIL,
+    MENU_DONE_NO_BACKUP,
+    MENU_DONE_BACKUP_FAIL,
+    MENU_DONE_PATCH_FAIL,
+    MENU_DONE_PATCH_FAIL_DANGEROUS,
+};
+
+void RenderMenuDone(MenuDoneError err);

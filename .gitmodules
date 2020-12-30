@@ -4,3 +4,9 @@
 [submodule "ext/wiiurpxlib"]
 	path = ext/wiiurpxlib
 	url = https://github.com/yawut/wiiurpxlib
+[submodule "ext/resinfs"]
+	path = ext/resinfs
+	url = https://gitlab.com/4TU/resinfs
+[submodule "ext/zstr"]
+	path = ext/zstr
+	url = https://github.com/mateidavid/zstr
