@@ -1,5 +1,8 @@
 #include "rpx_patches/rpx_backup_strategy.hpp"
+#include "rpx_patches/rpx_backup.hpp"
 #include "rpx_patches/rpx_hashes.hpp"
+#include "rpx_patches/rpx_patch.hpp"
+#include "util/copy_file.hpp"
 #include "util/log.h"
 #include "util/util.hpp"
 #include "util/titles.hpp"
@@ -17,12 +20,11 @@
 #include <whb/proc.h>
 #include <coreinit/mcp.h>
 
-#include <rpx.hpp>
-
 // /vol/system_slc/title/00050010/1000400a/code
 
 int main(int argc, char** argv) {
     int ret;
+    bool bret;
 
     LOGInit();
     //WHBLogConsoleInit();
@@ -73,6 +75,8 @@ int main(int argc, char** argv) {
     std::filesystem::path wave_path = miiverse_path/"code/wave.rpx";
     std::filesystem::path wave_bak_path = miiverse_path/"code/wave.rpx.orig";
 
+    std::error_code fserr;
+
     BackupState backup = GetBackupStrategy(wave_path, wave_bak_path);
     if (!backup.strategy) {
         //couldn't come up with a way to continue
@@ -110,21 +114,20 @@ int main(int argc, char** argv) {
         printf("bug: impossible state 2\n");
     }
 
-    /*rpx::rpx wave_rpx;
-    {
-        std::ifstream original_wave(wave_path, std::ios::binary);
-        //std::ofstream backup_wave("");
-        auto rpx_ret = rpx::readrpx(original_wave);
-        if (!rpx_ret) {
-            printf("couldn't parse Miiverse rpx!\n");
-            return -1;
-        }
-        wave_rpx = *rpx_ret;
+    bool error = false;
+
+    bret = backup_rpx(strategy.backup_action, wave_path, wave_bak_path);
+    if (!bret) {
+        printf("Failed to backup wave!\n");
+        error = true;
+        strategy.patch_action = P_DO_NOTHING;
     }
 
-    std::stringstream decompressed_wave;
-    rpx::decompress(wave_rpx);
-    rpx::writerpx(wave_rpx, decompressed_wave);*/
+    bret = patch_rpx(strategy.patch_action, wave_path, wave_bak_path);
+    if (!bret) {
+        printf("Failed to patch wave!\n");
+        error = true;
+    }
 
     while (WHBProcIsRunning()) {}
 

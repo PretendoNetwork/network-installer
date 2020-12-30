@@ -1,3 +1,5 @@
+#pragma once
+
 #include <utility>
 
 #define ARR_SIZE(arr) (sizeof(arr) / sizeof(arr[0]))

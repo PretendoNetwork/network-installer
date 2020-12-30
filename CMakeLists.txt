@@ -7,7 +7,9 @@ include("${WUT_ROOT}/share/wut.cmake" REQUIRED)
 add_executable(network-installer
     main.cpp
     rpx_patches/rpx_backup_strategy.cpp
+    rpx_patches/rpx_backup.cpp
     rpx_patches/rpx_hashes.cpp
+    rpx_patches/rpx_patch.cpp
     util/log.c
     util/titles.cpp
     util/iosu_fs.cpp
