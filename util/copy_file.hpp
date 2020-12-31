@@ -14,7 +14,8 @@
     //thanks Maschell
     size_t size;
 
-    if (destpath.string().find("1000400a") != std::string::npos) {
+    if (destpath.string().find("1000400a") != std::string::npos ||
+        destpath.string().find("1000400A") != std::string::npos) {
         printf("CRITICAL BUG: tried to write to OSv10!\n");
         return false;
     }
@@ -52,7 +53,8 @@
 }
 
 [[maybe_unused]] static bool fast_write_file(const std::filesystem::path& destpath, std::span<uint8_t> data) {
-    if (destpath.string().find("1000400a") != std::string::npos) {
+    if (destpath.string().find("1000400a") != std::string::npos ||
+        destpath.string().find("1000400A") != std::string::npos) {
         printf("CRITICAL BUG: tried to write to OSv10!\n");
         return false;
     }

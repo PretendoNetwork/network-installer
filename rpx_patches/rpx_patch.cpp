@@ -12,7 +12,8 @@
 bool patch_rpx(PatchAction action,
     const std::string& main_path,
     const std::string& backup_path,
-    const std::string& output_path
+    const std::string& output_path,
+    const std::string& patch_path
 )
 {
     std::string source_path;
@@ -34,8 +35,7 @@ bool patch_rpx(PatchAction action,
 
     std::vector<char> patch;
     {
-        //todo don't hardcode this. lookup via RPX_State?
-        std::ifstream patch_file("resin:/patches/wave.d.v113.p1.bps", std::ios::binary | std::ios::ate);
+        std::ifstream patch_file(patch_path, std::ios::binary | std::ios::ate);
         auto size = patch_file.tellg();
         if (size < 0) {
             printf("patch file didn't open!\n");

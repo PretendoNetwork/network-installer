@@ -104,16 +104,28 @@ int main(int argc, char** argv) {
     std::filesystem::path wave_bak_path = miiverse_path/"code/wave.rpx.orig";
     std::filesystem::path wave_patched_path = miiverse_path/"code/wave.rpx.patched";
 
+    std::filesystem::path pn_olv_path = miiverse_path/"code/pn_olv.rpl";
+    std::filesystem::path nn_olv_path = "iosu:/vol/system_slc/title/00050010/1000400a/code/nn_olv.rpl";
+    std::filesystem::path pn_olv_patched_path = miiverse_path/"code/pn_olv.rpl.patched";
+
     std::error_code fserr;
 
-    BackupState backup = GetBackupStrategy(wave_path, wave_bak_path);
-    if (!backup.strategy) {
+    BackupState wave_state = GetBackupStrategy(wave_path, wave_bak_path);
+    if (!wave_state.strategy) {
         //couldn't come up with a way to continue
         printf("Could not find a suitable backup strategy!\n");
         while (WHBProcIsRunning()) { RenderMenuDone(MENU_DONE_NO_BACKUP); PresentMenu(); }
         return -1;
     }
-    BackupStrategy strategy = *backup.strategy;
+    BackupStrategy wave_strategy = *wave_state.strategy;
+
+    //we can be a bit less careful with nn_olv, since we always have the stock file on hand
+    //if the stock file is bad, the patcher should catch it
+    BackupStrategy olv_strategy = {
+        .need_confirmation = false,
+        .backup_action = B_DO_NOTHING,
+        .patch_action = P_PATCH_FROM_BACKUP,
+    };
 
     bool proc = true;
     while ((proc = WHBProcIsRunning())) {
@@ -123,7 +135,7 @@ int main(int argc, char** argv) {
         if (error == VPAD_READ_SUCCESS) {
             if (vpad.trigger & VPAD_BUTTON_A) break;
         }
-        RenderMenuMiiverseConfirm(backup);
+        RenderMenuMiiverseConfirm(wave_state);
         PresentMenu();
     }
 
@@ -138,10 +150,18 @@ int main(int argc, char** argv) {
     RenderMenuLoading(task_percent(3), "Creating Miiverse backup...");
     PresentMenu();
 
-    bret = backup_rpx(strategy.backup_action, wave_path, wave_bak_path);
+    bret = backup_rpx(wave_strategy.backup_action, wave_path, wave_bak_path);
     if (!bret) {
         printf("Failed to backup wave!\n");
-        strategy.patch_action = P_DO_NOTHING;
+        wave_strategy.patch_action = P_DO_NOTHING;
+        while (WHBProcIsRunning()) { RenderMenuDone(MENU_DONE_BACKUP_FAIL); PresentMenu(); }
+        return -1;
+    }
+
+    bret = backup_rpx(olv_strategy.backup_action, pn_olv_path, nn_olv_path);
+    if (!bret) {
+        printf("Failed to backup olv!\n");
+        olv_strategy.patch_action = P_DO_NOTHING;
         while (WHBProcIsRunning()) { RenderMenuDone(MENU_DONE_BACKUP_FAIL); PresentMenu(); }
         return -1;
     }
@@ -149,9 +169,17 @@ int main(int argc, char** argv) {
     RenderMenuLoading(task_percent(4), "Applying Miiverse patches...");
     PresentMenu();
 
-    bret = patch_rpx(strategy.patch_action, wave_path, wave_bak_path, wave_patched_path);
+    bret = patch_rpx(wave_strategy.patch_action, wave_path, wave_bak_path, wave_patched_path, "resin:/patches/wave.d.v113.p1.bps");
     if (!bret) {
         printf("Failed to patch wave!\n");
+        while (WHBProcIsRunning()) { RenderMenuDone(MENU_DONE_PATCH_FAIL); PresentMenu(); }
+        return -1;
+    }
+
+    //DANGER: getting argument order wrong here could cause brickable writes to OSv10!
+    bret = patch_rpx(olv_strategy.patch_action, pn_olv_path, nn_olv_path, pn_olv_patched_path, "resin:/patches/nn_olv.d.v15072.p1.bps");
+    if (!bret) {
+        printf("Failed to patch olv!\n");
         while (WHBProcIsRunning()) { RenderMenuDone(MENU_DONE_PATCH_FAIL); PresentMenu(); }
         return -1;
     }
@@ -162,7 +190,17 @@ int main(int argc, char** argv) {
     {
         std::ifstream is(wave_patched_path, std::ios::binary);
         auto hash = rpx_hash(is);
-        if (hash.patch != RPX_PATCH_STATE_PRETENDO) {
+        if (hash.id != CURRENT_PRETENDO_WAVE) {
+            printf("Patcher made a corrupt file!\n");
+            while (WHBProcIsRunning()) { RenderMenuDone(MENU_DONE_PATCH_BAD); PresentMenu(); }
+            return -1;
+        }
+    }
+
+    {
+        std::ifstream is(pn_olv_patched_path, std::ios::binary);
+        auto hash = rpx_hash(is);
+        if (hash.id != CURRENT_PRETENDO_NN_OLV) {
             printf("Patcher made a corrupt file!\n");
             while (WHBProcIsRunning()) { RenderMenuDone(MENU_DONE_PATCH_BAD); PresentMenu(); }
             return -1;
@@ -181,6 +219,11 @@ int main(int argc, char** argv) {
         //we don't hard-fail here.
     }
 
+    bret = fast_copy_file(pn_olv_patched_path, pn_olv_path);
+    if (!bret) {
+        printf("Final olv file copy failed!\n");
+    }
+
     RenderMenuLoading(task_percent(7), "Verifying final patches...");
     PresentMenu();
 
@@ -191,8 +234,19 @@ int main(int argc, char** argv) {
             printf("Failed to commit patches - stock wave in place\n");
             while (WHBProcIsRunning()) { RenderMenuDone(MENU_DONE_PATCH_FAIL); PresentMenu(); }
             return -1;
-        } else if (hash.patch != RPX_PATCH_STATE_PRETENDO) {
+        } else if (hash.id != CURRENT_PRETENDO_WAVE) {
             printf("Failed to commit patches - wave corrupt!\n");
+            while (WHBProcIsRunning()) { RenderMenuDone(MENU_DONE_PATCH_FAIL_DANGEROUS); PresentMenu(); }
+            return -1;
+        }
+    }
+
+    {
+        std::ifstream is(pn_olv_path, std::ios::binary);
+        auto hash = rpx_hash(is);
+        if (hash.id != CURRENT_PRETENDO_NN_OLV) {
+            //we've already modified wave, so this is always dangerous
+            printf("Failed to commit patches - pn_olv corrupt!\n");
             while (WHBProcIsRunning()) { RenderMenuDone(MENU_DONE_PATCH_FAIL_DANGEROUS); PresentMenu(); }
             return -1;
         }

@@ -7,11 +7,16 @@ enum RPX_ID {
 
     //stock
     RPX_ID_WAVE_STOCK_v113,
+    RPX_ID_NN_OLV_STOCK_v15702,
 
     //pretendo patches
     RPX_ID_WAVE_PRETENDO_v113p1,
+    RPX_ID_NN_OLV_PRETENDO_v15072p1,
 };
 const char* rpx_id_name(RPX_ID id);
+
+#define CURRENT_PRETENDO_WAVE RPX_ID_WAVE_PRETENDO_v113p1
+#define CURRENT_PRETENDO_NN_OLV RPX_ID_NN_OLV_PRETENDO_v15072p1
 
 enum RPX_PatchState {
     RPX_PATCH_STATE_UNKNOWN,
