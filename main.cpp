@@ -87,7 +87,7 @@ int main(int argc, char** argv) {
     ret = iosu_fs_setup();
     if (ret < 0) {
         printf("failed to set up iosuhax!\n");
-        while (WHBProcIsRunning()) { RenderMenuDone(MENU_DONE_CFW_FAIL); PresentMenu(); }
+        while (WHBProcIsRunning()) { RenderMenuDone(MENU_DONE_NO_CFW); PresentMenu(); }
         return -1;
     }
     OnLeavingScope _ios_c([&] {
