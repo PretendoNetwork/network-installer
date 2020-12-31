@@ -4,12 +4,13 @@
 
 #include <filesystem>
 #include <array>
+#include <span>
 #include <unistd.h>
 #include <fcntl.h>
 
 #define COPY_FILE_CHUNK_SZ (512*1024)
 
-static bool fast_copy_file(const std::filesystem::path& srcpath, const std::filesystem::path& destpath) {
+[[maybe_unused]] static bool fast_copy_file(const std::filesystem::path& srcpath, const std::filesystem::path& destpath) {
     //thanks Maschell
     size_t size;
 
@@ -40,6 +41,28 @@ static bool fast_copy_file(const std::filesystem::path& srcpath, const std::file
     if (size < 0) {
         printf("failed %d\n", size);
         return false;
+    }
+
+    return true;
+}
+
+[[maybe_unused]] static bool fast_write_file(const std::filesystem::path& destpath, std::span<uint8_t> data) {
+    int dest = open(destpath.c_str(), O_CREAT | O_TRUNC | O_WRONLY, 0644);
+    if (dest < 0) return false;
+    OnLeavingScope _dst_c([&] {
+        if (dest >= 0) close(dest);
+        dest = -1;
+    });
+
+    size_t remaining = data.size();
+    while (remaining > 0) {
+        auto ret = write(dest, data.data() + (data.size() - remaining), remaining);
+        if (ret < 0) {
+            printf("failed write %d\n", ret);
+            return false;
+        }
+
+        remaining -= ret;
     }
 
     return true;

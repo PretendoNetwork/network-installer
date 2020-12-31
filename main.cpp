@@ -7,6 +7,7 @@
 #include "rpx_patches/rpx_hashes.hpp"
 #include "rpx_patches/rpx_patch.hpp"
 #include "util/log.h"
+#include "util/copy_file.hpp"
 #include "util/util.hpp"
 #include "util/titles.hpp"
 #include "util/iosu_fs.hpp"
@@ -26,7 +27,7 @@
 
 #include <romfs-wiiu.h>
 
-static constexpr int task_percent(int task) { return (task*100)/4; };
+static constexpr int task_percent(int task) { return (task*100)/7; };
 
 int main(int argc, char** argv) {
     int ret;
@@ -101,6 +102,7 @@ int main(int argc, char** argv) {
 
     std::filesystem::path wave_path = miiverse_path/"code/wave.rpx";
     std::filesystem::path wave_bak_path = miiverse_path/"code/wave.rpx.orig";
+    std::filesystem::path wave_patched_path = miiverse_path/"code/wave.rpx.patched";
 
     std::error_code fserr;
 
@@ -147,13 +149,58 @@ int main(int argc, char** argv) {
     RenderMenuLoading(task_percent(4), "Applying Miiverse patches...");
     PresentMenu();
 
-    bret = patch_rpx(strategy.patch_action, wave_path, wave_bak_path);
+    bret = patch_rpx(strategy.patch_action, wave_path, wave_bak_path, wave_patched_path);
     if (!bret) {
         printf("Failed to patch wave!\n");
-        while (WHBProcIsRunning()) { RenderMenuDone(MENU_DONE_PATCH_FAIL_DANGEROUS); PresentMenu(); }
+        while (WHBProcIsRunning()) { RenderMenuDone(MENU_DONE_PATCH_FAIL); PresentMenu(); }
         return -1;
     }
 
+    RenderMenuLoading(task_percent(5), "Verifying patched files...");
+    PresentMenu();
+
+    {
+        std::ifstream is(wave_patched_path, std::ios::binary);
+        auto hash = rpx_hash(is);
+        if (hash.patch != RPX_PATCH_STATE_PRETENDO) {
+            printf("Patcher made a corrupt file!\n");
+            while (WHBProcIsRunning()) { RenderMenuDone(MENU_DONE_PATCH_BAD); PresentMenu(); }
+            return -1;
+        }
+    }
+
+    //the point of no return
+    RenderMenuLoading(task_percent(6), "Committing changes...");
+    PresentMenu();
+
+    bret = fast_copy_file(wave_patched_path, wave_path);
+    if (!bret) {
+        printf("Final file copy failed!\n");
+        //the next step is verification. on the off chance the copy 100% failed
+        //and the stock wave is still there, we could still quit gracefully, so
+        //we don't hard-fail here.
+    }
+
+    RenderMenuLoading(task_percent(7), "Verifying final patches...");
+    PresentMenu();
+
+    {
+        std::ifstream is(wave_path, std::ios::binary);
+        auto hash = rpx_hash(is);
+        if (hash.patch == RPX_PATCH_STATE_STOCK) {
+            printf("Failed to commit patches - stock wave in place\n");
+            while (WHBProcIsRunning()) { RenderMenuDone(MENU_DONE_PATCH_FAIL); PresentMenu(); }
+            return -1;
+        } else if (hash.patch != RPX_PATCH_STATE_PRETENDO) {
+            printf("Failed to commit patches - wave corrupt!\n");
+            while (WHBProcIsRunning()) { RenderMenuDone(MENU_DONE_PATCH_FAIL_DANGEROUS); PresentMenu(); }
+            return -1;
+        }
+    }
+
+    //todo: flush volume on supported CFWs
+
+    //woo!
     while (WHBProcIsRunning()) { RenderMenuDone(MENU_DONE_NO_ERROR); PresentMenu(); }
 
     return 0;

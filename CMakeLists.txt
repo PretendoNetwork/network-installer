@@ -26,11 +26,12 @@ target_include_directories(network-installer PRIVATE
     .
 )
 
+add_subdirectory(ext/libbps)
 add_subdirectory(ext/libiosuhax)
 add_subdirectory(ext/wiiurpxlib)
 target_include_directories(network-installer PRIVATE ext/picosha2)
 target_include_directories(network-installer PRIVATE ext/zstr/src)
-target_link_libraries(network-installer PRIVATE libiosuhax::libiosuhax wiiurpxlib::wiiurpxlib)
+target_link_libraries(network-installer PRIVATE libbps::libbps libiosuhax::libiosuhax wiiurpxlib::wiiurpxlib)
 
 find_package(PkgConfig REQUIRED)
 pkg_check_modules(zlib REQUIRED IMPORTED_TARGET zlib)

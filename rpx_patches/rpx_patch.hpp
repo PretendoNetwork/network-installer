@@ -6,5 +6,6 @@
 bool patch_rpx(
     PatchAction action,
     const std::string& main_path,
-    const std::string& backup_path
+    const std::string& backup_path,
+    const std::string& output_path
 );

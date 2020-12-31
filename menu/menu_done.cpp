@@ -36,6 +36,9 @@ void RenderMenuDone(MenuDoneError err) {
         case MENU_DONE_PATCH_FAIL:
             message = "Failed to apply a patch. Your system has not been modified.";
             break;
+        case MENU_DONE_PATCH_BAD:
+            message = "Patch created a corrupt file. Your system has not been modified.";
+            break;
         case MENU_DONE_PATCH_FAIL_DANGEROUS:
             message = "Failed to apply a patch. Your system has been modified and may be in an unstable state.";
             break;
