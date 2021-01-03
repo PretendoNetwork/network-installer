@@ -1,3 +1,6 @@
+#include "cert_patches/cert_backup_strategy.hpp"
+#include "cert_patches/cert_backup.hpp"
+#include "cert_patches/cert_hashes.hpp"
 #include "menu/menu_done.hpp"
 #include "menu/menu_loading.hpp"
 #include "menu/menu_miiverse_confirm.hpp"
@@ -27,11 +30,12 @@
 
 #include <romfs-wiiu.h>
 
-static constexpr int task_percent(int task) { return (task*100)/7; };
+static constexpr int task_percent(int task) { return (task*100)/18; };
 
 int main(int argc, char** argv) {
     int ret;
     bool bret;
+    int task = 0;
 
     LOGInit();
     ramfsInit();
@@ -53,7 +57,7 @@ int main(int argc, char** argv) {
 
     printf("Pretendo Network Installer indev\n");
 
-    RenderMenuLoading(task_percent(0), "Finding Miiverse title...");
+    RenderMenuLoading(task_percent(task++), "Finding Miiverse title...");
     PresentMenu();
 
     std::filesystem::path miiverse_path;
@@ -81,7 +85,7 @@ int main(int argc, char** argv) {
     }
     /* No more MCP functions from here on out. OK to set up iosuhax. */
 
-    RenderMenuLoading(task_percent(1), "Checking CFW...");
+    RenderMenuLoading(task_percent(task++), "Checking CFW...");
     PresentMenu();
 
     ret = iosu_fs_setup();
@@ -97,9 +101,6 @@ int main(int argc, char** argv) {
     //goal: get a state together; ready to show a menu or something
     //https://marcan.st/2011/01/safe-hacking/
 
-    RenderMenuLoading(task_percent(2), "Examining current Miiverse state...");
-    PresentMenu();
-
     std::filesystem::path wave_path = miiverse_path/"code/wave.rpx";
     std::filesystem::path wave_bak_path = miiverse_path/"code/wave.rpx.orig";
     std::filesystem::path wave_patched_path = miiverse_path/"code/wave.rpx.patched";
@@ -108,7 +109,14 @@ int main(int argc, char** argv) {
     std::filesystem::path nn_olv_path = "iosu:/vol/system_slc/title/00050010/1000400a/code/nn_olv.rpl";
     std::filesystem::path pn_olv_patched_path = miiverse_path/"code/pn_olv.rpl.patched";
 
+    std::filesystem::path cert_path = "iosu:/vol/storage_mlc01/sys/title/0005001b/10054000/content/scerts/THAWTE_PREMIUM_SERVER_CA.der";
+    std::filesystem::path cert_bak_path = "iosu:/vol/storage_mlc01/sys/title/0005001b/10054000/content/scerts/THAWTE_PREMIUM_SERVER_CA.der.orig";
+    std::filesystem::path cert_patched_path = "resin:/dstrootx3.der";
+
     std::error_code fserr;
+
+    RenderMenuLoading(task_percent(task++), "Examining current Miiverse state... (wave.rpx)");
+    PresentMenu();
 
     BackupState wave_state = GetBackupStrategy(wave_path, wave_bak_path);
     if (!wave_state.strategy) {
@@ -119,6 +127,9 @@ int main(int argc, char** argv) {
     }
     BackupStrategy wave_strategy = *wave_state.strategy;
 
+    RenderMenuLoading(task_percent(task++), "Examining current Miiverse state... (nn_olv.rpl)");
+    PresentMenu();
+
     //we can be a bit less careful with nn_olv, since we always have the stock file on hand
     //if the stock file is bad, the patcher should catch it
     BackupStrategy olv_strategy = {
@@ -126,6 +137,19 @@ int main(int argc, char** argv) {
         .backup_action = B_DO_NOTHING,
         .patch_action = P_PATCH_FROM_BACKUP,
     };
+
+    RenderMenuLoading(task_percent(task++), "Examining current Miiverse state... (NSSL cert)");
+    PresentMenu();
+
+    //certs use a different strategy, since we're always overwriting from resin
+    auto cert_strategy_o = GetCertBackupStrategy(cert_path, cert_bak_path);
+    if (!cert_strategy_o) {
+        //couldn't continue
+        printf("Could not find a suitable certificate backup strategy!\n");
+        while (WHBProcIsRunning()) { RenderMenuDone(MENU_DONE_NO_CERT_BACKUP); PresentMenu(); }
+        return -1;
+    }
+    BackupStrategy cert_strategy = *cert_strategy_o;
 
     bool proc = true;
     while ((proc = WHBProcIsRunning())) {
@@ -147,7 +171,7 @@ int main(int argc, char** argv) {
 
     bool error = false;
 
-    RenderMenuLoading(task_percent(3), "Creating Miiverse backup...");
+    RenderMenuLoading(task_percent(task++), "Creating Miiverse backup... (wave.rpx)");
     PresentMenu();
 
     bret = backup_rpx(wave_strategy.backup_action, wave_path, wave_bak_path);
@@ -158,6 +182,9 @@ int main(int argc, char** argv) {
         return -1;
     }
 
+    RenderMenuLoading(task_percent(task++), "Creating Miiverse backup... (pn_olv.rpl)");
+    PresentMenu();
+
     bret = backup_rpx(olv_strategy.backup_action, pn_olv_path, nn_olv_path);
     if (!bret) {
         printf("Failed to backup olv!\n");
@@ -166,7 +193,18 @@ int main(int argc, char** argv) {
         return -1;
     }
 
-    RenderMenuLoading(task_percent(4), "Applying Miiverse patches...");
+    RenderMenuLoading(task_percent(task++), "Creating Miiverse backup... (NSSL cert)");
+    PresentMenu();
+
+    bret = backup_cert(cert_strategy.backup_action, cert_path, cert_bak_path);
+    if (!bret) {
+        printf("Failed to backup cert!\n");
+        cert_strategy.patch_action = P_DO_NOTHING;
+        while (WHBProcIsRunning()) { RenderMenuDone(MENU_DONE_BACKUP_FAIL); PresentMenu(); }
+        return -1;
+    }
+
+    RenderMenuLoading(task_percent(task++), "Applying Miiverse patches... (wave.rpx)");
     PresentMenu();
 
     bret = patch_rpx(wave_strategy.patch_action, wave_path, wave_bak_path, wave_patched_path, "resin:/patches/wave.d.v113.p1.bps");
@@ -176,6 +214,9 @@ int main(int argc, char** argv) {
         return -1;
     }
 
+    RenderMenuLoading(task_percent(task++), "Applying Miiverse patches... (nn_olv.rpl)");
+    PresentMenu();
+
     //DANGER: getting argument order wrong here could cause brickable writes to OSv10!
     bret = patch_rpx(olv_strategy.patch_action, pn_olv_path, nn_olv_path, pn_olv_patched_path, "resin:/patches/nn_olv.d.v15072.p1.bps");
     if (!bret) {
@@ -184,7 +225,7 @@ int main(int argc, char** argv) {
         return -1;
     }
 
-    RenderMenuLoading(task_percent(5), "Verifying patched files...");
+    RenderMenuLoading(task_percent(task++), "Verifying patched files... (wave.rpx)");
     PresentMenu();
 
     {
@@ -197,6 +238,9 @@ int main(int argc, char** argv) {
         }
     }
 
+    RenderMenuLoading(task_percent(task++), "Verifying patched files... (nn_olv.rpl)");
+    PresentMenu();
+
     {
         std::ifstream is(pn_olv_patched_path, std::ios::binary);
         auto hash = rpx_hash(is);
@@ -207,8 +251,21 @@ int main(int argc, char** argv) {
         }
     }
 
+    RenderMenuLoading(task_percent(task++), "Verifying patched files... (NSSL cert)");
+    PresentMenu();
+
+    {
+        std::ifstream is(cert_patched_path, std::ios::binary);
+        auto hash = cert_hash(is);
+        if (hash.id != CURRENT_PRETENDO_CERT) {
+            printf("New SSL cert is corrupt!\n");
+            while (WHBProcIsRunning()) { RenderMenuDone(MENU_DONE_PATCH_BAD); PresentMenu(); }
+            return -1;
+        }
+    }
+
     //the point of no return
-    RenderMenuLoading(task_percent(6), "Committing changes...");
+    RenderMenuLoading(task_percent(task++), "Committing changes... (wave.rpx)");
     PresentMenu();
 
     bret = fast_copy_file(wave_patched_path, wave_path);
@@ -219,12 +276,23 @@ int main(int argc, char** argv) {
         //we don't hard-fail here.
     }
 
+    RenderMenuLoading(task_percent(task++), "Committing changes... (nn_olv.rpl)");
+    PresentMenu();
+
     bret = fast_copy_file(pn_olv_patched_path, pn_olv_path);
     if (!bret) {
         printf("Final olv file copy failed!\n");
     }
 
-    RenderMenuLoading(task_percent(7), "Verifying final patches...");
+    RenderMenuLoading(task_percent(task++), "Committing changes... (NSSL cert)");
+    PresentMenu();
+
+    bret = fast_copy_file(cert_patched_path, cert_path);
+    if (!bret) {
+        printf("Final olv file copy failed!\n");
+    }
+
+    RenderMenuLoading(task_percent(task++), "Verifying final patches... (wave.rpx)");
     PresentMenu();
 
     {
@@ -241,12 +309,49 @@ int main(int argc, char** argv) {
         }
     }
 
+    RenderMenuLoading(task_percent(task++), "Verifying final patches... (nn_olv.rpl)");
+    PresentMenu();
+
     {
         std::ifstream is(pn_olv_path, std::ios::binary);
         auto hash = rpx_hash(is);
         if (hash.id != CURRENT_PRETENDO_NN_OLV) {
             //we've already modified wave, so this is always dangerous
             printf("Failed to commit patches - pn_olv corrupt!\n");
+            while (WHBProcIsRunning()) { RenderMenuDone(MENU_DONE_PATCH_FAIL_DANGEROUS); PresentMenu(); }
+            return -1;
+        }
+    }
+
+    RenderMenuLoading(task_percent(task++), "Verifying final patches... (NSSL cert)");
+    PresentMenu();
+
+    {
+        std::ifstream is(cert_path, std::ios::binary);
+        auto hash = cert_hash(is);
+        if (hash.id != CURRENT_PRETENDO_CERT) {
+            //we've already modified wave, so this is always dangerous
+            printf("Failed to commit patches - nssl cert corrupt!\n");
+            //oh shit, this could brick - restore backup
+            bret = fast_copy_file(cert_bak_path, cert_path);
+            if (!bret) {
+                printf("Reverting nssl patches failed!\n");
+                while (WHBProcIsRunning()) { RenderMenuDone(MENU_DONE_PATCH_FAIL_CERT_BRICK); PresentMenu(); }
+                return -1;
+            }
+
+            std::ifstream is2(cert_path, std::ios::binary);
+            auto hash2 = cert_hash(is2);
+            if (hash2.patch != CERT_PATCH_STATE_STOCK) {
+                printf("Reverting nssl patches failed!\n");
+                while (WHBProcIsRunning()) { RenderMenuDone(MENU_DONE_PATCH_FAIL_CERT_BRICK); PresentMenu(); }
+                return -1;
+            } else if (hash2.id != CURRENT_SACRIFICIAL_CERT) {
+                printf("Reverting NSSL cert resulted in the wrong cert?\n");
+                while (WHBProcIsRunning()) { RenderMenuDone(MENU_DONE_PATCH_FAIL_DANGEROUS); PresentMenu(); }
+                return -1;
+            }
+
             while (WHBProcIsRunning()) { RenderMenuDone(MENU_DONE_PATCH_FAIL_DANGEROUS); PresentMenu(); }
             return -1;
         }

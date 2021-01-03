@@ -30,6 +30,9 @@ void RenderMenuDone(MenuDoneError err) {
         case MENU_DONE_NO_BACKUP:
             message = "Could not find a clean version of the Miiverse applet.";
             break;
+        case MENU_DONE_NO_CERT_BACKUP:
+            message = "Could not find a clean version of the NSSL cert to backup.";
+            break;
         case MENU_DONE_BACKUP_FAIL:
             message = "Failed to create a backup of the Miiverse applet.";
             break;
@@ -41,6 +44,9 @@ void RenderMenuDone(MenuDoneError err) {
             break;
         case MENU_DONE_PATCH_FAIL_DANGEROUS:
             message = "Failed to apply a patch. Your system has been modified and may be in an unstable state.";
+            break;
+        case MENU_DONE_PATCH_FAIL_CERT_BRICK:
+            message = "Failed to replace a cert. This could brick - seek help on our Discord immediately.";
             break;
         default:
             message = "An unknown error occured.";

@@ -6,6 +6,9 @@ include("${WUT_ROOT}/share/wut.cmake" REQUIRED)
 
 add_executable(network-installer
     main.cpp
+    cert_patches/cert_backup_strategy.cpp
+    cert_patches/cert_backup.cpp
+    cert_patches/cert_hashes.cpp
     menu/menu_done.cpp
     menu/menu_loading.cpp
     menu/menu_miiverse_confirm.cpp
