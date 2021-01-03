@@ -54,10 +54,18 @@ void RenderMenuDone(MenuDoneError err) {
     }
 
     OSScreenPutFontEx(SCREEN_TV, 0, 20, message.c_str());
-    if (error) OSScreenPutFontEx(SCREEN_TV, 0, 22, "See pretendo.network/faq for details.");
+    if (error) {
+        OSScreenPutFontEx(SCREEN_TV, 0, 22, "See pretendo.network/faq for details.");
+    } else {
+        OSScreenPutFontEx(SCREEN_TV, 0, 22, "Please reboot your console.");
+    }
     OSScreenPutFontEx(SCREEN_TV, 0, 26, "HOME: Quit");
 
     OSScreenPutFontEx(SCREEN_DRC, 0, 10, message.c_str());
-    if (error) OSScreenPutFontEx(SCREEN_DRC, 0, 11, "See pretendo.network/faq for details.");
+    if (error) {
+        OSScreenPutFontEx(SCREEN_DRC, 0, 11, "See pretendo.network/faq for details.");
+    } else {
+        OSScreenPutFontEx(SCREEN_DRC, 0, 11, "Please reboot your console.");
+    }
     OSScreenPutFontEx(SCREEN_DRC, 0, 17, "HOME: Quit");
 }
