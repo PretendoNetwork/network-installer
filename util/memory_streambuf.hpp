@@ -14,12 +14,12 @@ public:
     memory_streambuf(std::vector<CharT>& v) : memory_streambuf(v.data(), v.size()) {}
 
 protected:
-    memory_streambuf::int_type overflow( memory_streambuf::int_type ch = TraitsT::eof() ) {
+    base_sbuf::int_type overflow( base_sbuf::int_type ch = TraitsT::eof() ) {
         printf("bug: overran streambuf!\n");
         return -1;
     }
 
-    memory_streambuf::pos_type seekoff( memory_streambuf::off_type off, std::ios_base::seekdir dir,
+    base_sbuf::pos_type seekoff( base_sbuf::off_type off, std::ios_base::seekdir dir,
         std::ios_base::openmode which = std::ios_base::in | std::ios_base::out ) {
 
         //mildly unsafe code
@@ -36,7 +36,7 @@ protected:
         return (which & std::ios_base::in) ? this->gptr() - this->eback() : this->pptr() - this->pbase();
     }
 
-    memory_streambuf::pos_type seekpos( memory_streambuf::pos_type pos,
+    base_sbuf::pos_type seekpos( base_sbuf::pos_type pos,
         std::ios_base::openmode which = std::ios_base::in | std::ios_base::out) {
 
         return this->seekoff(pos, std::ios_base::beg, which);
