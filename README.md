@@ -14,7 +14,6 @@ This is the official Pretendo Installer for the Wii U. It will patch your consol
 - **devkitPro** (PPC only, ARM code is already built)
 
 You need to set **devkitPro\msys\bin** into your PATH
-You also need the latest wut version from the github, the one hosted (updated from pacman commands) isn't supported
   
 # Credits
 - Pretendo Network team
