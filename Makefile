@@ -36,7 +36,7 @@ CXXFLAGS	:= $(CFLAGS)
 ASFLAGS	:=	-g $(ARCH)
 LDFLAGS	=	-g $(ARCH) $(RPXSPECS) -Wl,-Map,$(notdir $*.map)
 
-LIBS	:=  -lgui -lfreetype -lgd -lpng -ljpeg -lz -lmad -lvorbisidec -logg -lbz2 -lwut 
+LIBS	:=  -lz -lwut 
 
 #-------------------------------------------------------------------------------
 # list of directories containing libraries, this must be the top level
