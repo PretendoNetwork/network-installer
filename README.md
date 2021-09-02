@@ -1,3 +1,6 @@
+# Repo moved
+This repository has moved to [PretendoNetwork/Nimble](https://github.com/PretendoNetwork/Nimble)
+
 # NoSSL patch for the WiiU FW version 5.5.5
 
 5.5.5 updated a verification callback in IOS-NSEC, so the function we were patching was shifted a bit.
