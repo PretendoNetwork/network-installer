@@ -1,2 +1,2 @@
 # Repo moved
-This repository has moved to [PretendoNetwork/Nimble](https://github.com/PretendoNetwork/Nimble)
+This repository has moved to [PretendoNetwork/Martini](https://github.com/PretendoNetwork/Martini)
