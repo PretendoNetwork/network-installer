@@ -1,3 +1,6 @@
+# Repo moved
+This repository has moved to [PretendoNetwork/Nimble](https://github.com/PretendoNetwork/Nimble)
+
 # Pretendo Network Installer/Patcher (for the WiiU)
 
 [![N|Solid](https://camo.githubusercontent.com/b98196c2347796d66fa669e8510749665ec80ba0/68747470733a2f2f692e696d6775722e636f6d2f5839346237574b2e706e67)](https://pretendo.network)
